@@ -52,8 +52,23 @@ The `initRtc` method will be responsible for the core configuration we need for 
 
 3. Adding User To Dom - Create an HTML element and add it to dom with UID value. For now, this is the only thing we have to identify the user. We will add user names and avatars later.
 
-4. local/publish--: If you want others in the session to hear what you're saying or see you, you need to "publish" your audio or video. Without publishing, it's like having your microphone or camera on but nobody can hear or see you.you can start, stop, mute, or adjust them as needed.
+4. -> local/publish--: Focuses on the channel side. with publish you’re sending your local audio track (microphone sound) to the Agora channel. Other participants can hear what you’re saying.. Without publishing, it's like having your microphone or camera on but nobody can hear or see you.you can start, stop, mute, or adjust them as needed.
 
-remote/subscribe--: These are the audio tracks that you receive from other participants in the session. These tracks are played on your device so you can hear what others are saying. While you can mute or adjust the volume of remote audio tracks locally, you cannot control their transmission (i.e., you can't stop them from publishing)
-Tracks refer to streams of data that carry either audio or video content
+-> unpublish(): Focuses on the channel side. It stops sending your audio to others in the channel but does not affect the local microphone’s ability to capture audio.
+
+-> stop(): Focuses on the local side. It stops the microphone from capturing audio altogether, affecting local functionality.
+
+-> close(): with close you’re completely shutting down and disposing of the microphone track. It stops capturing audio, and all resources associated with it are released. If you want to start speaking again, you’d need to create a new audio track. It removes microphone.
+
+Ex- suppose we are on a zoom meeting and there is local mic on my pc and another option in the zoom meeting🎙️. Publish is like mic on your zoom-meet with which your voice reaches to the channel and all can hear you.
+Unpublish is like muting your zoom-meet mic, so your voice 'll not able to reach to the channel and no-one can hear you.
+Stop is like disabling your local mic.
+close is like removing your local mic.
+leave():(channel-side) Exit the group call, disconnecting from the channel and stopping all media streams.
+with Subscribe remote users on the channel able to send their audio track to the current channel with which you are able to hear them.
+
+-> remote/subscribe--: These are the audio tracks that you receive from other participants in the session. These tracks are played on your device so you can hear what others are saying. While you can mute or adjust the volume of remote audio tracks locally, you cannot control their transmission (i.e., you can't stop them from publishing)
+Tracks refer to streams of data that carry either audio or video content.
+
+
 ```
