@@ -52,7 +52,7 @@ The `initRtc` method will be responsible for the core configuration we need for 
 
 3. Adding User To Dom - Create an HTML element and add it to dom with UID value. For now, this is the only thing we have to identify the user. We will add user names and avatars later.
 
-4. -> local/publish--: Focuses on the channel side. with publish you’re sending your local audio track (microphone sound) to the Agora channel. Other participants can hear what you’re saying.. Without publishing, it's like having your microphone or camera on but nobody can hear or see you.you can start, stop, mute, or adjust them as needed.
+4. -> local/publish--: Focuses on the channel side. with publish you’re sending your local audio track (microphone sound) to the Agora channel. Other participants can hear what you’re saying.. Without publishing, it's like having your microphone or camera on but nobody can hear or see you. You can start, stop, mute, or adjust them as needed.
 
 -> unpublish(): Focuses on the channel side. It stops sending your audio to others in the channel but does not affect the local microphone’s ability to capture audio.
 

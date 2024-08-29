@@ -3,7 +3,7 @@ import mic_icon from "./assets/images/icons/mic-off.svg";
 import leave_icon from "./assets/images/icons/leave.svg";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { useEffect, useState } from "react";
-
+// start from 68th line------------------------ continued
 function App() {
   // rtc: Realtime communication
   // 1)local/publish--: If you want others in the session to hear what you're saying or see you, you need to "publish" your audio or video. Without publishing, it's like having your microphone or camera on but nobody can hear or see you.you can start, stop, mute, or adjust them as needed.
@@ -12,11 +12,14 @@ function App() {
   const [isFormVisible, setIsFormVisible] = useState(true);
   const [isRoomVisible, setIsRoomVisible] = useState(false);
   const [isRoomIdVisible, setIsRoomIdVisible] = useState(false);
+  const [name, setName] = useState("");
   const [rtcClient, setRtcClient] = useState(null);
   const [audioTracks, setAudioTracks] = useState({
     localAudioTrack: null,
     remoteAudioTracks: {},
   });
+  console.log("remoteAudioTracks--", audioTracks.remoteAudioTracks);
+
   const [rtcUid, setRtcUid] = useState();
   const [membersJoined, setMembersJoined] = useState([]);
   console.log("membersJoined--", membersJoined);
@@ -28,13 +31,21 @@ function App() {
   // console.log("Local-audio Track", audioTracks.localAudioTrack);
 
   let initRtc = async () => {
-    setRtcUid(Math.floor(Math.random() * 500)); //created user-id
+    setRtcUid(Math.floor(Math.random() * 1000)); //created user-id
 
     let client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" }); //creates client
     setRtcClient(client); //client val set into rtcClient state.
     // when value of RtcClient changes-> useEffect called and then tempFn called. I did this bcz state updates in React are asynchronous and sheduled so when rtcClient state changes its val from null to value useEffect is called follow up with initRtcFollowUp fn called.
     // I waited for the rtcClient state val to be changed from null,as the val of rtcClient is used in initRtcFollowUp fn to do some more operations.
   };
+
+  useEffect(() => {
+    if (rtcClient != null) initRtcFollowUp();
+  }, [rtcClient]);
+
+  useEffect(() => {
+    console.log("membersJoin--", membersJoined);
+  });
 
   const initRtcFollowUp = async () => {
     try {
@@ -55,35 +66,75 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (rtcClient != null) initRtcFollowUp();
-  }, [rtcClient]);
-
   function joinMemberHandler(user) {
     console.log("userDetails--", user);
     setMembersJoined((prev) => {
       return [...prev, { id: user.uid }];
     });
   }
-// LEFTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT// START HERE
+
   async function publishMemberHandler(user, mediaType) {
     await rtcClient.subscribe(user, mediaType);
-    
+
     if (mediaType === "audio") {
       setAudioTracks((prev) => {
-        return { ...prev, remoteAudioTracks: {[user.uid]:user.audioTrack} };
+        return {
+          ...prev,
+          remoteAudioTracks: {
+            ...prev.remoteAudioTracks,
+            [user.uid]: [user.audioTrack],
+          },
+        };
       });
       // audioTracks.remoteAudioTracks[user.uid] = [user.audioTrack];
-      // console.log("remoteAudioTracks--", audioTracks.remoteAudioTracks);
-
       user.audioTrack.play();
     }
+  }
+  console.log("MEMBERS--", membersJoined);
+  function userLeftHandler(user) {
+    setName("vash");
+    console.log("user-left--", user, membersJoined);
+    setMembersJoined((prev) => {
+      console.log("prev", prev);
+      let members = prev.filter((member) => {
+        console.log("memz", member.id, user.uid);
+        return member.id != user.uid;
+      });
+      console.log("mems", members);
+      return members;
+    });
+    setAudioTracks((prev) => {
+      console.log("audT",prev)
+      const updatedRemoteAudioTracks = { ...prev.remoteAudioTracks };
+      console.log("updated",updatedRemoteAudioTracks,user.uid)
+      Object.keys(updatedRemoteAudioTracks).forEach((key) => {
+        if (key == user.uid) {
+          delete updatedRemoteAudioTracks[key];
+        }
+      });
+      console.log("updated",updatedRemoteAudioTracks,user.uid)
+
+      return {
+        ...prev,
+        remoteAudioTracks:updatedRemoteAudioTracks
+      };
+    });
+    // console.log("membersJoined--",membersJoined);
+
+    //  let newMembers= membersJoined.filter((member)=>{
+    //     return member.id!=user.uid
+    //   })
+
+    //   console.log("newMembers--",newMembers)
+
+    // setMembersJoined(newMembers)
   }
   // useEffect managing if any other user joins the channel
   useEffect(() => {
     if (rtcClient) {
       rtcClient.on("user-joined", joinMemberHandler);
       rtcClient.on("user-published", publishMemberHandler);
+      rtcClient.on("user-left", userLeftHandler);
     }
   }, [rtcClient]);
 
@@ -97,7 +148,6 @@ function App() {
     setIsRoomVisible(false);
     setIsRoomIdVisible(false);
     setIsFormVisible(true);
-    setMembersJoined("");
   };
 
   return (
