@@ -3,7 +3,10 @@ import mute_icon from "./assets/images/icons/mic-off.svg";
 import unmute_icon from "./assets/images/icons/mic.svg";
 import leave_icon from "./assets/images/icons/leave.svg";
 import AgoraRTC from "agora-rtc-sdk-ng";
-import { useEffect, useState } from "react";
+import { act, useEffect, useState } from "react";
+import MembersJoined from "./components/MembersJoined";
+import Speaker from "./components/ChannelCreator";
+import ChannelCreator from "./components/ChannelCreator";
 // start from 68th line------------------------ continued
 function App() {
   // rtc: Realtime communication
@@ -12,27 +15,22 @@ function App() {
   // 2)remote/subscribe--: These are the audio tracks that you receive from other participants in the session. These tracks are played on your device so you can hear what others are saying. While you can mute or adjust the volume of remote audio tracks locally, you cannot control their transmission (i.e., you can't stop them from publishing)
   const [isFormVisible, setIsFormVisible] = useState(true);
   const [isRoomVisible, setIsRoomVisible] = useState(false);
-  const [isRoomIdVisible, setIsRoomIdVisible] = useState(false);
+  const [isTotalMembersVisible, setIsTotalMembersVisible] = useState(false);
   const [rtcClient, setRtcClient] = useState(null);
   const [isMute, setIsMute] = useState(true);
   const [audioTracks, setAudioTracks] = useState({
     localAudioTrack: null,
     remoteAudioTracks: {},
   });
-  console.log("remoteAudioTracks--", audioTracks.remoteAudioTracks);
-
   const [rtcUid, setRtcUid] = useState();
   const [membersJoined, setMembersJoined] = useState([]);
-  console.log("membersJoined--", membersJoined);
-
+  const[speakingMembers,setSpeakingMembers]=useState()
   const appid = process.env.REACT_APP_APP_ID;
   const token = null;
-  console.log("rtcUid--", rtcUid);
   let channelName = "main";
-  // console.log("Local-audio Track", audioTracks.localAudioTrack);
 
   let initRtc = async () => {
-    setRtcUid(Math.floor(Math.random() * 1000)); //created user-id
+    setRtcUid(Math.floor(Math.random() * 2000)); //created user-id
 
     let client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" }); //creates client
     setRtcClient(client); //client val set into rtcClient state.
@@ -48,20 +46,25 @@ function App() {
     try {
       await rtcClient.join(appid, channelName, token, rtcUid);
       let lclAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      setIsMute(true)
+      setIsMute(true);
       setAudioTracks((prev) => {
         return { ...prev, localAudioTrack: lclAudioTrack };
       });
       /*  
     you can perform operations with localAudioTrack in the same function right after setting it. Since state updates in React are asynchronous, it's safer to use the local variable (in this case, lclAudioTrack) directly within the same function. However, if you need to reference the state variable immediately after updating it within the same function, you can do so using the local variable or by accessing the state directly.
     */
-      // await rtcClient.publish(lclAudioTrack);
+      initVolumeIndicator();
       setIsRoomVisible(true);
-      setIsRoomIdVisible(true);
+      setIsTotalMembersVisible(true);
     } catch (e) {
       console.log("ERROR OCCURED", e);
     }
   };
+
+  function initVolumeIndicator() {
+    AgoraRTC.setParameter('AUDIO_VOLUME_INDICATION_INTERVAL',200)
+    rtcClient.enableAudioVolumeIndicator();
+  }
 
   function joinMemberHandler(user) {
     console.log("userDetails--", user);
@@ -119,6 +122,17 @@ function App() {
       rtcClient.on("user-joined", joinMemberHandler);
       rtcClient.on("user-left", userLeftHandler);
       rtcClient.on("user-published", publishMemberHandler);
+      rtcClient.on("volume-indicator", (volume) => {
+        // console.log("volumes--",volume);
+        const activeSpeakers=volume.filter((vol)=>{
+          if(vol.level>=50)
+            return vol
+        }).map((vol)=>vol.uid)
+        setSpeakingMembers(activeSpeakers)
+
+        // console.log("activeSpeakers--",activeSpeakers)
+
+      });
     }
   }, [rtcClient]);
 
@@ -130,10 +144,9 @@ function App() {
     rtcClient.unpublish();
     rtcClient.leave();
     setIsRoomVisible(false);
-    setIsRoomIdVisible(false);
+    setIsTotalMembersVisible(false);
     setIsFormVisible(true);
   };
-
 
   // effect managing the mic-mute-unmute functionality
   useEffect(() => {
@@ -150,13 +163,11 @@ function App() {
     }
   }
 
-  // async function micMuteHandler() {
-  //   await rtcClient.unpublish(audioTracks.localAudioTrack);
-  //   setIsMute(() => true);
-  // }
+
 
   return (
     <div id="container">
+      {/* Room-Header */}
       <div
         id="room-header"
         style={{ display: isRoomVisible ? "flex" : "none" }}
@@ -168,7 +179,7 @@ function App() {
             id="mic-icon"
             className="control-icon"
             src={isMute ? mute_icon : unmute_icon}
-            onClick={()=>setIsMute((prev) => !prev)}
+            onClick={() => setIsMute((prev) => !prev)}
           />
           <img
             id="leave-icon"
@@ -188,35 +199,26 @@ function App() {
         }}
         style={{ display: isFormVisible ? "block" : "none" }}
       >
-        {/* <input name="displayname" type="text" placeholder="Enter display name..."/>  */}
         <input type="submit" value="Enter Room" />
       </form>
-      <div id="members">
-        <div
-          className="speaker"
-          style={{ display: isRoomIdVisible ? "block" : "none" }}
-        >
-          <p>{rtcUid}</p>
-          <p>
-            {audioTracks.localAudioTrack &&
-              audioTracks.localAudioTrack.trackMediaType}
-          </p>
-        </div>
-        {membersJoined &&
-          membersJoined.map((member) => {
-            return (
-              <div
-                className="speaker"
-                style={{ display: isRoomIdVisible ? "block" : "none" }}
-              >
-                <p>{member.id}</p>
-                <p>
-                  {audioTracks.localAudioTrack &&
-                    audioTracks.localAudioTrack.trackMediaType}
-                </p>
-              </div>
-            );
-          })}
+      <div
+        id="members"
+        style={{ display: isTotalMembersVisible ? "flex" : "none" }}
+      >
+        <ChannelCreator
+          isTotalMembersVisible={isTotalMembersVisible}
+          rtcUid={rtcUid}
+          audioTracks={audioTracks}
+          rtcClient={rtcClient}
+          speakingMembers={speakingMembers}
+        />
+        <MembersJoined
+          membersJoined={membersJoined}
+          audioTracks={audioTracks}
+          isTotalMembersVisible={isTotalMembersVisible}
+          rtcClient={rtcClient}
+          speakingMembers={speakingMembers}
+        />
       </div>
     </div>
   );
