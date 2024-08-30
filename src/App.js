@@ -1,5 +1,6 @@
 import "./App.css";
-import mic_icon from "./assets/images/icons/mic-off.svg";
+import mute_icon from "./assets/images/icons/mic-off.svg";
+import unmute_icon from "./assets/images/icons/mic.svg";
 import leave_icon from "./assets/images/icons/leave.svg";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { useEffect, useState } from "react";
@@ -12,8 +13,8 @@ function App() {
   const [isFormVisible, setIsFormVisible] = useState(true);
   const [isRoomVisible, setIsRoomVisible] = useState(false);
   const [isRoomIdVisible, setIsRoomIdVisible] = useState(false);
-  const [name, setName] = useState("");
   const [rtcClient, setRtcClient] = useState(null);
+  const [isMute, setIsMute] = useState(true);
   const [audioTracks, setAudioTracks] = useState({
     localAudioTrack: null,
     remoteAudioTracks: {},
@@ -43,22 +44,18 @@ function App() {
     if (rtcClient != null) initRtcFollowUp();
   }, [rtcClient]);
 
-  useEffect(() => {
-    console.log("membersJoin--", membersJoined);
-  });
-
   const initRtcFollowUp = async () => {
     try {
       await rtcClient.join(appid, channelName, token, rtcUid);
       let lclAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-
+      setIsMute(true)
       setAudioTracks((prev) => {
         return { ...prev, localAudioTrack: lclAudioTrack };
       });
       /*  
     you can perform operations with localAudioTrack in the same function right after setting it. Since state updates in React are asynchronous, it's safer to use the local variable (in this case, lclAudioTrack) directly within the same function. However, if you need to reference the state variable immediately after updating it within the same function, you can do so using the local variable or by accessing the state directly.
     */
-      await rtcClient.publish(lclAudioTrack);
+      // await rtcClient.publish(lclAudioTrack);
       setIsRoomVisible(true);
       setIsRoomIdVisible(true);
     } catch (e) {
@@ -69,7 +66,33 @@ function App() {
   function joinMemberHandler(user) {
     console.log("userDetails--", user);
     setMembersJoined((prev) => {
+      for (let member of prev) {
+        if (member && member.id == user.uid) {
+          return [...prev];
+        }
+      }
       return [...prev, { id: user.uid }];
+    });
+  }
+
+  function userLeftHandler(user) {
+    setMembersJoined((prev) => {
+      let members = prev.filter((member) => {
+        return member.id != user.uid;
+      });
+      return members;
+    });
+    setAudioTracks((prev) => {
+      const updatedRemoteAudioTracks = { ...prev.remoteAudioTracks };
+      Object.keys(updatedRemoteAudioTracks).forEach((key) => {
+        if (key == user.uid) {
+          delete updatedRemoteAudioTracks[key];
+        }
+      });
+      return {
+        ...prev,
+        remoteAudioTracks: updatedRemoteAudioTracks,
+      };
     });
   }
 
@@ -90,51 +113,12 @@ function App() {
       user.audioTrack.play();
     }
   }
-  console.log("MEMBERS--", membersJoined);
-  function userLeftHandler(user) {
-    setName("vash");
-    console.log("user-left--", user, membersJoined);
-    setMembersJoined((prev) => {
-      console.log("prev", prev);
-      let members = prev.filter((member) => {
-        console.log("memz", member.id, user.uid);
-        return member.id != user.uid;
-      });
-      console.log("mems", members);
-      return members;
-    });
-    setAudioTracks((prev) => {
-      console.log("audT",prev)
-      const updatedRemoteAudioTracks = { ...prev.remoteAudioTracks };
-      console.log("updated",updatedRemoteAudioTracks,user.uid)
-      Object.keys(updatedRemoteAudioTracks).forEach((key) => {
-        if (key == user.uid) {
-          delete updatedRemoteAudioTracks[key];
-        }
-      });
-      console.log("updated",updatedRemoteAudioTracks,user.uid)
-
-      return {
-        ...prev,
-        remoteAudioTracks:updatedRemoteAudioTracks
-      };
-    });
-    // console.log("membersJoined--",membersJoined);
-
-    //  let newMembers= membersJoined.filter((member)=>{
-    //     return member.id!=user.uid
-    //   })
-
-    //   console.log("newMembers--",newMembers)
-
-    // setMembersJoined(newMembers)
-  }
   // useEffect managing if any other user joins the channel
   useEffect(() => {
     if (rtcClient) {
       rtcClient.on("user-joined", joinMemberHandler);
-      rtcClient.on("user-published", publishMemberHandler);
       rtcClient.on("user-left", userLeftHandler);
+      rtcClient.on("user-published", publishMemberHandler);
     }
   }, [rtcClient]);
 
@@ -150,6 +134,27 @@ function App() {
     setIsFormVisible(true);
   };
 
+
+  // effect managing the mic-mute-unmute functionality
+  useEffect(() => {
+    if (rtcClient) micMuteUnmuteHandler();
+  }, [isMute]);
+
+  async function micMuteUnmuteHandler() {
+    if (isMute) {
+      await rtcClient.unpublish(audioTracks.localAudioTrack);
+      // setIsMute(() => true);
+    } else {
+      await rtcClient.publish(audioTracks.localAudioTrack);
+      // setIsMute(() => false);
+    }
+  }
+
+  // async function micMuteHandler() {
+  //   await rtcClient.unpublish(audioTracks.localAudioTrack);
+  //   setIsMute(() => true);
+  // }
+
   return (
     <div id="container">
       <div
@@ -159,7 +164,12 @@ function App() {
         <h1 id="room-name"></h1>
 
         <div id="room-header-controls">
-          <img id="mic-icon" className="control-icon" src={mic_icon} />
+          <img
+            id="mic-icon"
+            className="control-icon"
+            src={isMute ? mute_icon : unmute_icon}
+            onClick={()=>setIsMute((prev) => !prev)}
+          />
           <img
             id="leave-icon"
             className="control-icon"
