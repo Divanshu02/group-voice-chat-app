@@ -3,11 +3,11 @@ import mute_icon from "./assets/images/icons/mic-off.svg";
 import unmute_icon from "./assets/images/icons/mic.svg";
 import leave_icon from "./assets/images/icons/leave.svg";
 import AgoraRTC from "agora-rtc-sdk-ng";
-import { act, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import MembersJoined from "./components/MembersJoined";
-import Speaker from "./components/ChannelCreator";
 import ChannelCreator from "./components/ChannelCreator";
-// start from 68th line------------------------ continued
+import AgoraRTM from "agora-rtm-sdk";
+
 function App() {
   // rtc: Realtime communication
   // 1)local/publish--: If you want others in the session to hear what you're saying or see you, you need to "publish" your audio or video. Without publishing, it's like having your microphone or camera on but nobody can hear or see you.you can start, stop, mute, or adjust them as needed.
@@ -17,19 +17,52 @@ function App() {
   const [isRoomVisible, setIsRoomVisible] = useState(false);
   const [isTotalMembersVisible, setIsTotalMembersVisible] = useState(false);
   const [rtcClient, setRtcClient] = useState(null);
+  const [rtcUid, setRtcUid] = useState();
   const [isMute, setIsMute] = useState(true);
   const [audioTracks, setAudioTracks] = useState({
     localAudioTrack: null,
     remoteAudioTracks: {},
   });
-  const [rtcUid, setRtcUid] = useState();
+
+  const [userName, setUserName] = useState("");
   const [membersJoined, setMembersJoined] = useState([]);
-  const[speakingMembers,setSpeakingMembers]=useState()
+  const [speakingMembers, setSpeakingMembers] = useState();
   const appid = process.env.REACT_APP_APP_ID;
   const token = null;
   let channelName = "main";
 
-  let initRtc = async () => {
+  // const signalingEngine = new AgoraRTM.RTM(appid, "user-id", {
+  //   token: token,
+  // });
+
+  let initRTM = async () => {
+    const signalingEngine = new AgoraRTM.RTM(appid, channelName, {
+      token: token,
+    });
+
+    // Listen for events
+    signalingEngine.addEventListener("message", (eventArgs) => {
+      console.log(`${eventArgs.publisher}: ${eventArgs.message}`);
+    });
+    // signalingEngine.on("member-joined",(user)=>{
+    //   console.log("mem",user)
+    // })
+
+    // Login
+    try {
+      await signalingEngine.login();
+    } catch (err) {
+      console.log({ err }, "error occurs at login.");
+    }
+
+    // Send channel message
+    try {
+      await signalingEngine.publish("channel", "hello world");
+    } catch (err) {
+      console.log({ err }, "error occurs at publish message");
+    }
+  };
+  let initRtc = () => {
     setRtcUid(Math.floor(Math.random() * 2000)); //created user-id
 
     let client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" }); //creates client
@@ -62,7 +95,7 @@ function App() {
   };
 
   function initVolumeIndicator() {
-    AgoraRTC.setParameter('AUDIO_VOLUME_INDICATION_INTERVAL',200)
+    AgoraRTC.setParameter("AUDIO_VOLUME_INDICATION_INTERVAL", 200);
     rtcClient.enableAudioVolumeIndicator();
   }
 
@@ -123,15 +156,15 @@ function App() {
       rtcClient.on("user-left", userLeftHandler);
       rtcClient.on("user-published", publishMemberHandler);
       rtcClient.on("volume-indicator", (volume) => {
-        // console.log("volumes--",volume);
-        const activeSpeakers=volume.filter((vol)=>{
-          if(vol.level>=50)
-            return vol
-        }).map((vol)=>vol.uid)
-        setSpeakingMembers(activeSpeakers)
+        console.log("volumes--", volume);
+        const activeSpeakers = volume
+          .filter((vol) => {
+            if (vol.level > 50) return vol;
+          })
+          .map((vol) => vol.uid);
+        setSpeakingMembers(activeSpeakers);
 
         // console.log("activeSpeakers--",activeSpeakers)
-
       });
     }
   }, [rtcClient]);
@@ -156,14 +189,10 @@ function App() {
   async function micMuteUnmuteHandler() {
     if (isMute) {
       await rtcClient.unpublish(audioTracks.localAudioTrack);
-      // setIsMute(() => true);
     } else {
       await rtcClient.publish(audioTracks.localAudioTrack);
-      // setIsMute(() => false);
     }
   }
-
-
 
   return (
     <div id="container">
@@ -180,12 +209,14 @@ function App() {
             className="control-icon"
             src={isMute ? mute_icon : unmute_icon}
             onClick={() => setIsMute((prev) => !prev)}
+            alt="mic-icon"
           />
           <img
             id="leave-icon"
             className="control-icon"
             src={leave_icon}
             onClick={leaveRoom}
+            alt="leave-icon"
           />
         </div>
       </div>
@@ -195,10 +226,18 @@ function App() {
         onSubmit={(e) => {
           e.preventDefault();
           initRtc();
+          // initRTM();
           setIsFormVisible(false);
         }}
         style={{ display: isFormVisible ? "block" : "none" }}
       >
+        <input
+          type="text"
+          name="displayName"
+          placeholder="Enter Display Name"
+          id=""
+          onChange={(e) => setUserName(e.target.value)}
+        />
         <input type="submit" value="Enter Room" />
       </form>
       <div

@@ -1,16 +1,15 @@
 import React from "react";
 
 const MembersJoined = (props) => {
-  const { membersJoined, audioTracks, speakingMembers } =
-    props;
+  const { membersJoined, audioTracks, speakingMembers } = props;
   return (
     <>
       {membersJoined &&
-        membersJoined.map((member) => {
+        membersJoined.map((member, idx) => {
           return (
             <div
               className="speaker"
-              //   style={{ display: "flex"}}
+              key={idx}
               style={{
                 borderColor:
                   speakingMembers &&
