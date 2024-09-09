@@ -7,6 +7,16 @@ import { useEffect, useState } from "react";
 import MembersJoined from "./components/MembersJoined";
 import ChannelCreator from "./components/ChannelCreator";
 import AgoraRTM from "agora-rtm-sdk";
+import male1 from "./assets/images/avatars/male-1.png";
+import male2 from "./assets/images/avatars/male-2.png";
+import male3 from "./assets/images/avatars/male-3.png";
+import male4 from "./assets/images/avatars/male-4.png";
+import male5 from "./assets/images/avatars/male-5.png";
+import female1 from "./assets/images/avatars/female-1.png";
+import female2 from "./assets/images/avatars/female-2.png";
+import female3 from "./assets/images/avatars/female-3.png";
+import female4 from "./assets/images/avatars/female-4.png";
+import female5 from "./assets/images/avatars/female-5.png";
 
 function App() {
   // rtc: Realtime communication
@@ -29,9 +39,12 @@ function App() {
   const [rtmChannel, setRtmChannel] = useState();
   const [userName, setUserName] = useState("");
   const [displayUserDetails, setDisplayUserDetails] = useState([]);
+  const [displayAvatar, setDisplayAvatar] = useState([]);
+  const [selectedAvatar, setselectedAvatar] = useState(null);
   const [membersJoined, setMembersJoined] = useState([]);
   const [speakingMembers, setSpeakingMembers] = useState();
   const [roomName, setRoomName] = useState([]);
+
   const appid = process.env.REACT_APP_APP_ID;
   const token = null;
 
@@ -49,14 +62,24 @@ function App() {
   let initRtmFollowUp = async () => {
     try {
       await rtmClient.login({ uid: String(rtcUid), token: token });
-      rtmClient.addOrUpdateLocalUserAttributes({ name: userName });
+      rtmClient.addOrUpdateLocalUserAttributes({
+        name: userName,
+        avatar: displayAvatar,
+      });
       const channel = rtmClient.createChannel(roomName);
       await channel.join();
       setRtmChannel(channel);
       let { name } = await rtmClient.getUserAttributesByKeys(String(rtcUid), [
         "name",
       ]);
-      setDisplayUserDetails((prev) => [...prev, { id: rtcUid, name: name }]);
+      let { avatar } = await rtmClient.getUserAttributesByKeys(String(rtcUid), [
+        "avatar",
+      ]);
+      setDisplayUserDetails((prev) => [
+        ...prev,
+        { id: rtcUid, name: name, roomName: roomName, avatar: avatar },
+      ]);
+
       window.addEventListener("beforeunload", (e) => {
         channel.leave();
         rtmClient.logout();
@@ -115,6 +138,9 @@ function App() {
     let { name } = await rtmClient.getUserAttributesByKeys(String(user.uid), [
       "name",
     ]);
+    let { avatar } = await rtmClient.getUserAttributesByKeys(String(user.uid), [
+      "avatar",
+    ]);
     // setDisplayUserDetails((prev) => [...prev, { id: rtcUid, name: name }]);
     setDisplayUserDetails((prev) => {
       for (let member of prev) {
@@ -122,7 +148,7 @@ function App() {
           return [...prev];
         }
       }
-      return [...prev, { id: user.uid, name: name }];
+      return [...prev, { id: user.uid, name: name, avatar: avatar }];
     });
     setMembersJoined((prev) => {
       for (let member of prev) {
@@ -130,7 +156,7 @@ function App() {
           return [...prev];
         }
       }
-      return [...prev, { id: user.uid }];
+      return [...prev, { id: user.uid, roomName: roomName }];
     });
   }
 
@@ -139,7 +165,7 @@ function App() {
       let members = prev.filter((member) => {
         return member.id != user.uid;
       });
-      return members;
+      return [...members];
     });
     setMembersJoined((prev) => {
       let members = prev.filter((member) => {
@@ -208,7 +234,7 @@ function App() {
     // Read readme.md for better understanding
     audioTracks.localAudioTrack.stop();
     audioTracks.localAudioTrack.close();
-
+    setselectedAvatar(-1)
     rtcClient.unpublish();
     rtcClient.leave();
     leaveRtmChannel();
@@ -228,6 +254,12 @@ function App() {
     } else {
       await rtcClient.publish(audioTracks.localAudioTrack);
     }
+  }
+
+  function displayAvatarHandler(e, idx) {
+    setDisplayAvatar(e.target.src);
+    setselectedAvatar(idx);
+    // e.target.style.borderColor='green'
   }
 
   return (
@@ -261,13 +293,133 @@ function App() {
         id="form"
         onSubmit={(e) => {
           e.preventDefault();
-
+          if (selectedAvatar == null) {
+            alert("You have to select an avatar before entering into room");
+            return;
+          }
           initRtc();
           initRtm();
           setIsFormVisible(false);
         }}
         style={{ display: isFormVisible ? "block" : "none" }}
       >
+        <div>
+          <h3>Select an Avatar</h3>
+        </div>
+
+        {/* border-clr:#00ff00,opacity=1  */}
+        <div id="avatars">
+          <img
+            src={male1}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 0
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 0)}
+          />
+          <img
+            src={male2}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 1
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 1)}
+          />
+          <img
+            src={male3}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 2
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 2)}
+          />
+          <img
+            src={male4}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 3
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 3)}
+          />
+          <img
+            src={male5}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 4
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 4)}
+          />
+          <img
+            src={female1}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 5
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 5)}
+          />
+          <img
+            src={female2}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 6
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 6)}
+          />
+          <img
+            src={female3}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 7
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 7)}
+          />
+          <img
+            src={female4}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 8
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 8)}
+          />
+          <img
+            src={female5}
+            alt=""
+            className="avatar-selection"
+            style={
+              selectedAvatar === 9
+                ? { borderColor: "#00ff00", opacity: "1" }
+                : { borderColor: "white", opacity: ".5" }
+            }
+            onClick={(e) => displayAvatarHandler(e, 9)}
+          />
+        </div>
         <div id="form-fields">
           <label>Display Name:</label>
           <input

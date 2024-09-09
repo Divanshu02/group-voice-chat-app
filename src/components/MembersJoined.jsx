@@ -11,26 +11,35 @@ const MembersJoined = (props) => {
             <div
               className="speaker"
               key={idx}
-              style={{
-                borderColor:
-                  speakingMembers &&
-                  speakingMembers.length > 0 &&
-                  speakingMembers.includes(member.id)
-                    ? "green"
-                    : "white",
-                display: "flex",
-              }}
+    
             >
+              <img
+                src={
+                  displayUserDetails?.find((user) => {
+                    return user.id == member.id;
+                  })?.avatar
+                }
+                className="user-avatar"
+                style={{
+                  borderColor:
+                    speakingMembers &&
+                    speakingMembers.length > 0 &&
+                    speakingMembers.includes(member.id)
+                      ? "#00ff00"
+                      : "white",
+                }}
+                alt=""
+              />
               <p>
                 {displayUserDetails?.find((user) => user.id == member.id)?.name}
               </p>
-              <p>
+              {/* <p>
                 {displayUserDetails?.find((user) => user.id == member.id)?.id}
-              </p>
-              <p>
+              </p> */}
+              {/* <p>
                 {audioTracks.localAudioTrack &&
                   audioTracks.localAudioTrack.trackMediaType}
-              </p>
+              </p> */}
             </div>
           );
         })}

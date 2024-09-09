@@ -6,15 +6,26 @@ const ChannelCreator = (props) => {
   return (
     <div
       className="speaker"
-      style={{
-        borderColor:
-          speakingMembers &&
-          speakingMembers.length > 0 &&
-          speakingMembers.includes(rtcUid)
-            ? "green"
-            : "white",
-      }}
+     
     >
+      <img
+        src={
+          displayUserDetails?.find((user) => {
+            console.log("creatorDet--", user);
+            return user.id == rtcUid;
+          })?.avatar
+        }
+        className="user-avatar"
+        style={{
+          borderColor:
+            speakingMembers &&
+            speakingMembers.length > 0 &&
+            speakingMembers.includes(rtcUid)
+              ? "#00ff00"
+              : "white",
+        }}
+        alt=""
+      />
       <p>
         {
           displayUserDetails?.find((user) => {
@@ -23,18 +34,18 @@ const ChannelCreator = (props) => {
           })?.name
         }
       </p>
-      <p>
+      {/* <p>
         {
           displayUserDetails?.find((user) => {
             console.log("creatorDet--", user);
             return user.id == rtcUid;
           })?.id
         }
-      </p>
-      <p>
+      </p> */}
+      {/* <p>
         {audioTracks.localAudioTrack &&
           audioTracks.localAudioTrack.trackMediaType}
-      </p>
+      </p> */}
     </div>
   );
 };
