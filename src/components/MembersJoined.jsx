@@ -1,7 +1,8 @@
 import React from "react";
 
 const MembersJoined = (props) => {
-  const { membersJoined, audioTracks, speakingMembers } = props;
+  const { membersJoined, audioTracks, speakingMembers, displayUserDetails } =
+    props;
   return (
     <>
       {membersJoined &&
@@ -15,12 +16,17 @@ const MembersJoined = (props) => {
                   speakingMembers &&
                   speakingMembers.length > 0 &&
                   speakingMembers.includes(member.id)
-                    ? "red"
+                    ? "green"
                     : "white",
                 display: "flex",
               }}
             >
-              <p>{member.id}</p>
+              <p>
+                {displayUserDetails?.find((user) => user.id == member.id)?.name}
+              </p>
+              <p>
+                {displayUserDetails?.find((user) => user.id == member.id)?.id}
+              </p>
               <p>
                 {audioTracks.localAudioTrack &&
                   audioTracks.localAudioTrack.trackMediaType}

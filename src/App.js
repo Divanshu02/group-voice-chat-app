@@ -24,44 +24,55 @@ function App() {
     remoteAudioTracks: {},
   });
 
+  const [rtmClient, setRtmClient] = useState(null);
+  const [rtmUid, setRtmUid] = useState();
+  const [rtmChannel, setRtmChannel] = useState();
   const [userName, setUserName] = useState("");
+  const [displayUserDetails, setDisplayUserDetails] = useState([]);
   const [membersJoined, setMembersJoined] = useState([]);
   const [speakingMembers, setSpeakingMembers] = useState();
+  const [roomName, setRoomName] = useState([]);
   const appid = process.env.REACT_APP_APP_ID;
   const token = null;
-  let channelName = "main";
 
   // const signalingEngine = new AgoraRTM.RTM(appid, "user-id", {
   //   token: token,
   // });
-
-  let initRTM = async () => {
-    const signalingEngine = new AgoraRTM.RTM(appid, channelName, {
-      token: token,
-    });
-
-    // Listen for events
-    signalingEngine.addEventListener("message", (eventArgs) => {
-      console.log(`${eventArgs.publisher}: ${eventArgs.message}`);
-    });
-    // signalingEngine.on("member-joined",(user)=>{
-    //   console.log("mem",user)
-    // })
-
-    // Login
+  console.log("TotalMembersJoined--", membersJoined);
+  let initRtm = async () => {
+    // new--
+    // setRtmUid(String(Math.floor(Math.random() * 2032)));
+    const client = AgoraRTM.createInstance(appid);
+    setRtmClient(client);
+  };
+  // addOrUpdateLocalUserAttributes
+  let initRtmFollowUp = async () => {
     try {
-      await signalingEngine.login();
-    } catch (err) {
-      console.log({ err }, "error occurs at login.");
-    }
-
-    // Send channel message
-    try {
-      await signalingEngine.publish("channel", "hello world");
-    } catch (err) {
-      console.log({ err }, "error occurs at publish message");
+      await rtmClient.login({ uid: String(rtcUid), token: token });
+      rtmClient.addOrUpdateLocalUserAttributes({ name: userName });
+      const channel = rtmClient.createChannel(roomName);
+      await channel.join();
+      setRtmChannel(channel);
+      let { name } = await rtmClient.getUserAttributesByKeys(String(rtcUid), [
+        "name",
+      ]);
+      setDisplayUserDetails((prev) => [...prev, { id: rtcUid, name: name }]);
+      window.addEventListener("beforeunload", (e) => {
+        channel.leave();
+        rtmClient.logout();
+      });
+      console.log("usJoined-", name);
+    } catch (e) {
+      console.log("rtmError--", e);
     }
   };
+
+  useEffect(() => {
+    if (rtmClient) {
+      initRtmFollowUp();
+    }
+  }, [rtmClient]);
+
   let initRtc = () => {
     setRtcUid(Math.floor(Math.random() * 2000)); //created user-id
 
@@ -77,7 +88,7 @@ function App() {
 
   const initRtcFollowUp = async () => {
     try {
-      await rtcClient.join(appid, channelName, token, rtcUid);
+      await rtcClient.join(appid, roomName, token, rtcUid);
       let lclAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       setIsMute(true);
       setAudioTracks((prev) => {
@@ -99,8 +110,20 @@ function App() {
     rtcClient.enableAudioVolumeIndicator();
   }
 
-  function joinMemberHandler(user) {
-    console.log("userDetails--", user);
+  async function joinMemberHandler(user) {
+    // console.log("userDetails--", user);
+    let { name } = await rtmClient.getUserAttributesByKeys(String(user.uid), [
+      "name",
+    ]);
+    // setDisplayUserDetails((prev) => [...prev, { id: rtcUid, name: name }]);
+    setDisplayUserDetails((prev) => {
+      for (let member of prev) {
+        if (member && member.id == user.uid) {
+          return [...prev];
+        }
+      }
+      return [...prev, { id: user.uid, name: name }];
+    });
     setMembersJoined((prev) => {
       for (let member of prev) {
         if (member && member.id == user.uid) {
@@ -112,6 +135,12 @@ function App() {
   }
 
   function userLeftHandler(user) {
+    setDisplayUserDetails((prev) => {
+      let members = prev.filter((member) => {
+        return member.id != user.uid;
+      });
+      return members;
+    });
     setMembersJoined((prev) => {
       let members = prev.filter((member) => {
         return member.id != user.uid;
@@ -131,6 +160,12 @@ function App() {
       };
     });
   }
+
+  let leaveRtmChannel = async () => {
+    await rtmChannel.leave();
+    await rtmClient.logout();
+    // handleMemberLeft
+  };
 
   async function publishMemberHandler(user, mediaType) {
     await rtcClient.subscribe(user, mediaType);
@@ -156,7 +191,7 @@ function App() {
       rtcClient.on("user-left", userLeftHandler);
       rtcClient.on("user-published", publishMemberHandler);
       rtcClient.on("volume-indicator", (volume) => {
-        console.log("volumes--", volume);
+        // console.log("volumes--", volume);
         const activeSpeakers = volume
           .filter((vol) => {
             if (vol.level > 50) return vol;
@@ -176,6 +211,7 @@ function App() {
 
     rtcClient.unpublish();
     rtcClient.leave();
+    leaveRtmChannel();
     setIsRoomVisible(false);
     setIsTotalMembersVisible(false);
     setIsFormVisible(true);
@@ -225,20 +261,34 @@ function App() {
         id="form"
         onSubmit={(e) => {
           e.preventDefault();
+
           initRtc();
-          // initRTM();
+          initRtm();
           setIsFormVisible(false);
         }}
         style={{ display: isFormVisible ? "block" : "none" }}
       >
-        <input
-          type="text"
-          name="displayName"
-          placeholder="Enter Display Name"
-          id=""
-          onChange={(e) => setUserName(e.target.value)}
-        />
-        <input type="submit" value="Enter Room" />
+        <div id="form-fields">
+          <label>Display Name:</label>
+          <input
+            required
+            type="text"
+            name="displayName"
+            placeholder="Enter Display Name"
+            id=""
+            onChange={(e) => setUserName(e.target.value)}
+          />
+
+          <label>Room Name:</label>
+          <input
+            required
+            name="roomname"
+            type="text"
+            placeholder="Enter room name..."
+            onChange={(e) => setRoomName(e.target.value)}
+          />
+          <input type="submit" value="Enter Room" />
+        </div>
       </form>
       <div
         id="members"
@@ -247,6 +297,7 @@ function App() {
         <ChannelCreator
           isTotalMembersVisible={isTotalMembersVisible}
           rtcUid={rtcUid}
+          displayUserDetails={displayUserDetails}
           audioTracks={audioTracks}
           rtcClient={rtcClient}
           speakingMembers={speakingMembers}
@@ -254,6 +305,7 @@ function App() {
         <MembersJoined
           membersJoined={membersJoined}
           audioTracks={audioTracks}
+          displayUserDetails={displayUserDetails}
           isTotalMembersVisible={isTotalMembersVisible}
           rtcClient={rtcClient}
           speakingMembers={speakingMembers}

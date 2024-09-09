@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from "react";
 
 const ChannelCreator = (props) => {
-  const { rtcUid, audioTracks, speakingMembers } = props;
-
+  const { rtcUid, audioTracks, speakingMembers, displayUserDetails } = props;
+  console.log("displayUserDetails--", displayUserDetails);
   return (
     <div
       className="speaker"
@@ -11,11 +11,26 @@ const ChannelCreator = (props) => {
           speakingMembers &&
           speakingMembers.length > 0 &&
           speakingMembers.includes(rtcUid)
-            ? "red"
+            ? "green"
             : "white",
       }}
     >
-      <p>{rtcUid}</p>
+      <p>
+        {
+          displayUserDetails?.find((user) => {
+            console.log("creatorDet--", user);
+            return user.id == rtcUid;
+          })?.name
+        }
+      </p>
+      <p>
+        {
+          displayUserDetails?.find((user) => {
+            console.log("creatorDet--", user);
+            return user.id == rtcUid;
+          })?.id
+        }
+      </p>
       <p>
         {audioTracks.localAudioTrack &&
           audioTracks.localAudioTrack.trackMediaType}
