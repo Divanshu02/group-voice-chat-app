@@ -6,7 +6,6 @@ const ChannelCreator = (props) => {
   return (
     <div
       className="speaker"
-     
     >
       <img
         src={

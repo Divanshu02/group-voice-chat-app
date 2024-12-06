@@ -11,12 +11,11 @@ const MembersJoined = (props) => {
             <div
               className="speaker"
               key={idx}
-    
-            >
+            > 
               <img
                 src={
                   displayUserDetails?.find((user) => {
-                    return user.id == member.id;
+                    return user.id == member.id;  
                   })?.avatar
                 }
                 className="user-avatar"

@@ -51,20 +51,26 @@ function App() {
   // const signalingEngine = new AgoraRTM.RTM(appid, "user-id", {
   //   token: token,
   // });
-  console.log("TotalMembersJoined--", membersJoined);
+  // console.log("TotalMembersJoined--", membersJoined);
   let initRtm = async () => {
-    // new--
-    // setRtmUid(String(Math.floor(Math.random() * 2032)));
     const client = AgoraRTM.createInstance(appid);
     setRtmClient(client);
   };
-  // addOrUpdateLocalUserAttributes
+
+  useEffect(() => {
+    if (rtmClient) {
+      initRtmFollowUp();
+    }
+  }, [rtmClient]);
+  
   let initRtmFollowUp = async () => {
     try {
       await rtmClient.login({ uid: String(rtcUid), token: token });
+      // To send any data like a payload
       rtmClient.addOrUpdateLocalUserAttributes({
         name: userName,
         avatar: displayAvatar,
+        channelName: roomName,
       });
       const channel = rtmClient.createChannel(roomName);
       await channel.join();
@@ -75,9 +81,14 @@ function App() {
       let { avatar } = await rtmClient.getUserAttributesByKeys(String(rtcUid), [
         "avatar",
       ]);
+      let { channelName } = await rtmClient.getUserAttributesByKeys(
+        String(rtcUid),
+        ["channelName"]
+      );
+
       setDisplayUserDetails((prev) => [
         ...prev,
-        { id: rtcUid, name: name, roomName: roomName, avatar: avatar },
+        { id: rtcUid, name: name, roomName: channelName, avatar: avatar },
       ]);
 
       window.addEventListener("beforeunload", (e) => {
@@ -89,12 +100,6 @@ function App() {
       console.log("rtmError--", e);
     }
   };
-
-  useEffect(() => {
-    if (rtmClient) {
-      initRtmFollowUp();
-    }
-  }, [rtmClient]);
 
   let initRtc = () => {
     setRtcUid(Math.floor(Math.random() * 2000)); //created user-id
@@ -144,10 +149,12 @@ function App() {
     // setDisplayUserDetails((prev) => [...prev, { id: rtcUid, name: name }]);
     setDisplayUserDetails((prev) => {
       for (let member of prev) {
+        // If that user already presents in previous state, return the prev state
         if (member && member.id == user.uid) {
           return [...prev];
         }
       }
+      // if new user joins
       return [...prev, { id: user.uid, name: name, avatar: avatar }];
     });
     setMembersJoined((prev) => {
@@ -234,7 +241,7 @@ function App() {
     // Read readme.md for better understanding
     audioTracks.localAudioTrack.stop();
     audioTracks.localAudioTrack.close();
-    setselectedAvatar(-1)
+    setselectedAvatar(-1);
     rtcClient.unpublish();
     rtcClient.leave();
     leaveRtmChannel();
@@ -267,9 +274,9 @@ function App() {
       {/* Room-Header */}
       <div
         id="room-header"
-        style={{ display: isRoomVisible ? "flex" : "none" }}
+        style={{ display: isRoomVisible ? "flex" : "none" }}//initially hidden as no one joins the room
       >
-        <h1 id="room-name"></h1>
+        <h1 id="room-name">{roomName}</h1>
 
         <div id="room-header-controls">
           <img
